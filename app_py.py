@@ -13,16 +13,16 @@ import numpy as np
 import warnings
 import matplotlib.pyplot as plt
 
-
+# Suppress Keras warnings
 warnings.filterwarnings("ignore", category=UserWarning, module='keras')
 
-
+# Fetch API key from Streamlit secrets
 api_key = st.secrets["api_key"]
 
-
+# Function to create and train the model
 def create_and_train_model(x_train, y_train):
     model = tf.keras.Sequential([
-        tf.keras.layers.LSTM(64, activation='relu', input_shape=(None, 1)),
+        tf.keras.layers.LSTM(64, activation='relu', input_shape=(x_train.shape[1], x_train.shape[2])),
         tf.keras.layers.Dense(1)
     ])
     model.compile(optimizer='adam', loss='mean_squared_error')
@@ -33,24 +33,26 @@ def create_and_train_model(x_train, y_train):
     st.success("Model trained successfully!")
     return model
 
-
+# Streamlit UI components
 st.title("Stock Prediction with LSTM")
 symbol = st.text_input("Enter Stock Symbol", "AAPL")
 
 if symbol:
     st.write(f"Fetching data for {symbol}...")
     
-    # Placeholder for actual data fetching logic
-    x_train = np.random.rand(100, 1)
-    y_train = np.random.rand(100, 1)
+    # Generate random data for testing (reshape to 3D)
+    x_train = np.random.rand(100, 1, 1)  # Reshape to (samples, timesteps, features)
+    y_train = np.random.rand(100, 1)     # Keep y_train as a 2D array (samples, target)
     
     # Train the model
     model = create_and_train_model(x_train, y_train)
     
     # Display model summary
     st.write("Model Summary:")
-    st.text(model.summary())  # Using `st.text()` will display it as plain text
+    st.text(model.summary())  # Display model summary as plain text
     
     # Example of generating a plot (replace with actual plot logic)
     plt.plot(np.arange(100), y_train)
     st.pyplot(plt)  # Display the plot
+
+    
