@@ -7,7 +7,8 @@ Original file is located at
     https://colab.research.google.com/drive/1Z3vaB2P0wtgNXP-30Lbz5naamEdWymdp
 """
 
-import streamlit as st
+
+    import streamlit as st
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
@@ -15,31 +16,31 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import precision_score, recall_score, f1_score, classification_report
 import warnings
 
-# Suppress Keras warnings
+# Suppress Keras and sklearn warnings
 warnings.filterwarnings("ignore", category=UserWarning, module='keras')
 
-# Title
-st.set_page_config(page_title="LSTM Stock Predictor", layout="wide")
+# Secret key placeholder (not used here, but keep structure)
+api_key = st.secrets.get("api_key", None)
+
+# App Title
 st.title("📈 LSTM Stock Price Prediction")
 
-# Input
+# Input field
 symbol = st.text_input("Enter Stock Symbol", "AAPL")
 
 if symbol:
     st.write(f"🔄 Generating synthetic stock data for: `{symbol}`")
 
-    # Generate synthetic stock data
+    # 1. Generate synthetic stock price data
     np.random.seed(42)
-    data = np.cumsum(np.random.randn(500, 1) * 2 + 0.5) + 100  # Simulated stock price
-    data = np.array(data).astype(np.float32)  # Ensure proper numeric format
+    data = np.cumsum(np.random.randn(500) * 2 + 0.5) + 100  # 1D array
 
-    # Ensure proper numeric format and shape before scaling
-    data = np.array(data).reshape(-1, 1).astype(np.float32)
+    # 2. Reshape and scale
+    data = data.reshape(-1, 1).astype(np.float32)  # Ensure (n_samples, 1)
+    scaler = MinMaxScaler(feature_range=(0, 1))
     scaled_data = scaler.fit_transform(data)
 
-    
-
-    # Prepare sequences
+    # 3. Create sequences for LSTM
     sequence_length = 60
     X, y = [], []
     for i in range(sequence_length, len(scaled_data)):
@@ -48,7 +49,7 @@ if symbol:
     X, y = np.array(X), np.array(y)
     X = X.reshape(X.shape[0], X.shape[1], 1)
 
-    # Build LSTM model
+    # 4. Build the LSTM model
     model = tf.keras.Sequential([
         tf.keras.layers.LSTM(50, return_sequences=True, input_shape=(X.shape[1], 1)),
         tf.keras.layers.Dropout(0.2),
@@ -58,41 +59,41 @@ if symbol:
     ])
     model.compile(optimizer='adam', loss='mean_squared_error')
 
-    # Train model
-    with st.spinner("⏳ Training the LSTM model..."):
+    # 5. Train the model
+    with st.spinner("Training the LSTM model..."):
         model.fit(X, y, epochs=20, batch_size=32, verbose=0)
-    st.success("✅ Model trained successfully!")
+    st.success("✅ Model trained!")
 
-    # Predict prices
+    # 6. Predict
     predicted_prices = model.predict(X)
     predicted_prices = scaler.inverse_transform(predicted_prices.reshape(-1, 1))
     true_prices = scaler.inverse_transform(y.reshape(-1, 1))
 
-    # Binary classification for performance metrics
+    # 7. Classification metrics
     y_true = (np.diff(true_prices.flatten(), prepend=true_prices[0]) > 0).astype(int)
     y_pred = (np.diff(predicted_prices.flatten(), prepend=predicted_prices[0]) > 0).astype(int)
 
-    st.subheader("📊 Classification Metrics")
-    st.write(f"**Precision:** {precision_score(y_true, y_pred):.2f}")
-    st.write(f"**Recall:** {recall_score(y_true, y_pred):.2f}")
-    st.write(f"**F1 Score:** {f1_score(y_true, y_pred):.2f}")
+    st.subheader("📊 Classification Report")
+    st.write(f"**Precision**: {precision_score(y_true, y_pred):.2f}")
+    st.write(f"**Recall**: {recall_score(y_true, y_pred):.2f}")
+    st.write(f"**F1 Score**: {f1_score(y_true, y_pred):.2f}")
     st.text(classification_report(y_true, y_pred))
 
-    # Predict next day
+    # 8. Predict next day price
     last_60_days = scaled_data[-60:]
     future_input = last_60_days.reshape(1, 60, 1)
     future_price_scaled = model.predict(future_input)
     future_price = scaler.inverse_transform(future_price_scaled)
-    st.subheader("🔮 Predicted Price for Next Day:")
+    st.subheader("📈 Predicted Price for Next Day:")
     st.success(f"${future_price.flatten()[0]:.2f}")
 
-    # Plot results
-    st.subheader("📉 Actual vs Predicted Stock Prices")
-    fig, ax = plt.subplots(figsize=(10, 5))
-    ax.plot(true_prices, label='Actual Price', color='blue')
-    ax.plot(predicted_prices, label='Predicted Price', color='orange')
-    ax.set_xlabel("Days")
-    ax.set_ylabel("Price")
-    ax.set_title(f"Stock Price Prediction for {symbol}")
-    ax.legend()
-    st.pyplot(fig)
+    # 9. Plot
+    st.subheader("📉 Actual vs. Predicted Stock Prices")
+    plt.figure(figsize=(10, 5))
+    plt.plot(true_prices, label='Actual Price', color='blue')
+    plt.plot(predicted_prices, label='Predicted Price', color='orange')
+    plt.xlabel("Days")
+    plt.ylabel("Price")
+    plt.title(f"Stock Price Prediction for {symbol}")
+    plt.legend()
+    st.pyplot(plt)
