@@ -10,49 +10,97 @@ Original file is located at
 import streamlit as st
 import tensorflow as tf
 import numpy as np
-import warnings
 import matplotlib.pyplot as plt
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.metrics import precision_score, recall_score, f1_score, classification_report
+import warnings
 
 # Suppress Keras warnings
 warnings.filterwarnings("ignore", category=UserWarning, module='keras')
 
-# Fetch API key from Streamlit secrets
+# Fetch API key from Streamlit secrets (not used in this version)
 api_key = st.secrets["api_key"]
 
-# Function to create and train the model
-def create_and_train_model(x_train, y_train):
-    model = tf.keras.Sequential([
-        tf.keras.layers.LSTM(64, activation='relu', input_shape=(x_train.shape[1], x_train.shape[2])),
-        tf.keras.layers.Dense(1)
-    ])
-    model.compile(optimizer='adam', loss='mean_squared_error')
-    
-    with st.spinner('Training the model...'):
-        model.fit(x_train, y_train, epochs=5, batch_size=32)
-    
-    st.success("Model trained successfully!")
-    return model
+st.title("📈 LSTM Stock Price Prediction")
 
-# Streamlit UI components
-st.title("Stock Prediction with LSTM")
 symbol = st.text_input("Enter Stock Symbol", "AAPL")
 
 if symbol:
-    st.write(f"Fetching data for {symbol}...")
-    
-    # Generate random data for testing (reshape to 3D)
-    x_train = np.random.rand(100, 1, 1)  # Reshape to (samples, timesteps, features)
-    y_train = np.random.rand(100, 1)     # Keep y_train as a 2D array (samples, target)
-    
-    # Train the model
-    model = create_and_train_model(x_train, y_train)
-    
-    # Display model summary
-    st.write("Model Summary:")
-    st.text(model.summary())  # Display model summary as plain text
-    
-    # Example of generating a plot (replace with actual plot logic)
-    plt.plot(np.arange(100), y_train)
-    st.pyplot(plt)  # Display the plot
+    st.write(f"🔄 Generating synthetic stock data for: `{symbol}`")
 
-    
+    # -----------------------------
+    # Generate synthetic data (replace later with real stock data)
+    # -----------------------------
+    np.random.seed(42)
+    data = np.cumsum(np.random.randn(500, 1) * 2 + 0.5) + 100  # Simulated stock price
+    scaler = MinMaxScaler(feature_range=(0, 1))
+    scaled_data = scaler.fit_transform(data)
+
+    # -----------------------------
+    # Create sequences for LSTM
+    # -----------------------------
+    sequence_length = 60
+    X, y = [], []
+    for i in range(sequence_length, len(scaled_data)):
+        X.append(scaled_data[i - sequence_length:i, 0])
+        y.append(scaled_data[i, 0])
+    X, y = np.array(X), np.array(y)
+    X = X.reshape(X.shape[0], X.shape[1], 1)
+
+    # -----------------------------
+    # Build and train the model
+    # -----------------------------
+    model = tf.keras.Sequential()
+    model.add(tf.keras.layers.LSTM(50, return_sequences=True, input_shape=(X.shape[1], 1)))
+    model.add(tf.keras.layers.Dropout(0.2))
+    model.add(tf.keras.layers.LSTM(50))
+    model.add(tf.keras.layers.Dropout(0.2))
+    model.add(tf.keras.layers.Dense(1))
+
+    model.compile(optimizer='adam', loss='mean_squared_error')
+
+    with st.spinner("Training the LSTM model..."):
+        model.fit(X, y, epochs=20, batch_size=32, verbose=0)
+    st.success("✅ Model trained!")
+
+    # -----------------------------
+    # Make predictions
+    # -----------------------------
+    predicted_prices = model.predict(X)
+    predicted_prices = scaler.inverse_transform(predicted_prices.reshape(-1, 1))
+    true_prices = scaler.inverse_transform(y.reshape(-1, 1))
+
+    # -----------------------------
+    # Classification metrics (Up/Down prediction)
+    # -----------------------------
+    y_true = (np.diff(true_prices.flatten(), prepend=true_prices[0]) > 0).astype(int)
+    y_pred = (np.diff(predicted_prices.flatten(), prepend=predicted_prices[0]) > 0).astype(int)
+
+    st.write("### 🔍 Classification Report")
+    st.write(f"**Precision**: {precision_score(y_true, y_pred):.2f}")
+    st.write(f"**Recall**: {recall_score(y_true, y_pred):.2f}")
+    st.write(f"**F1 Score**: {f1_score(y_true, y_pred):.2f}")
+    st.text(classification_report(y_true, y_pred))
+
+    # -----------------------------
+    # Predict the next day price
+    # -----------------------------
+    last_60_days = scaled_data[-60:]
+    future_input = last_60_days.reshape(1, 60, 1)
+    future_price_scaled = model.predict(future_input)
+    future_price = scaler.inverse_transform(future_price_scaled)
+    st.write("### 📅 Predicted Price for Next Day:")
+    st.success(f"${future_price.flatten()[0]:.2f}")
+
+    # -----------------------------
+    # Plot actual vs. predicted
+    # -----------------------------
+    st.write("### 📊 Actual vs. Predicted Stock Prices")
+    plt.figure(figsize=(10, 5))
+    plt.plot(true_prices, label='Actual Price', color='blue')
+    plt.plot(predicted_prices, label='Predicted Price', color='orange')
+    plt.xlabel("Days")
+    plt.ylabel("Price")
+    plt.title(f"Stock Price Prediction for {symbol}")
+    plt.legend()
+    st.pyplot(plt)
