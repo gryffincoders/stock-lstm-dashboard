@@ -20,7 +20,8 @@ from tensorflow.keras.layers import LSTM, Dense, Dropout
 from alpha_vantage.timeseries import TimeSeries
 from datetime import datetime, timedelta
 
-api_key = 'UJ3YLSB5O8OS5SU7'
+api_key = st.secrets["api_key"]
+
 ts = TimeSeries(key=api_key, output_format='pandas')
 data, meta_data = ts.get_daily(symbol='AAPL', outputsize='full')
 
