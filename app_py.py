@@ -28,13 +28,17 @@ symbol = st.text_input("Enter Stock Symbol", "AAPL")
 if symbol:
     st.write(f"🔄 Generating synthetic stock data for: `{symbol}`")
 
-    
+    # -----------------------------
+    # Generate synthetic data (replace later with real stock data)
+    # -----------------------------
     np.random.seed(42)
     data = np.cumsum(np.random.randn(500, 1) * 2 + 0.5) + 100  # Simulated stock price
     scaler = MinMaxScaler(feature_range=(0, 1))
     scaled_data = scaler.fit_transform(data)
 
-   
+    # -----------------------------
+    # Create sequences for LSTM
+    # -----------------------------
     sequence_length = 60
     X, y = [], []
     for i in range(sequence_length, len(scaled_data)):
@@ -43,7 +47,9 @@ if symbol:
     X, y = np.array(X), np.array(y)
     X = X.reshape(X.shape[0], X.shape[1], 1)
 
-    
+    # -----------------------------
+    # Build and train the model
+    # -----------------------------
     model = tf.keras.Sequential()
     model.add(tf.keras.layers.LSTM(50, return_sequences=True, input_shape=(X.shape[1], 1)))
     model.add(tf.keras.layers.Dropout(0.2))
@@ -55,33 +61,41 @@ if symbol:
 
     with st.spinner("Training the LSTM model..."):
         model.fit(X, y, epochs=20, batch_size=32, verbose=0)
-    st.success("Model trained!")
+    st.success("✅ Model trained!")
 
-    
+    # -----------------------------
+    # Make predictions
+    # -----------------------------
     predicted_prices = model.predict(X)
     predicted_prices = scaler.inverse_transform(predicted_prices.reshape(-1, 1))
     true_prices = scaler.inverse_transform(y.reshape(-1, 1))
 
-    
+    # -----------------------------
+    # Classification metrics (Up/Down prediction)
+    # -----------------------------
     y_true = (np.diff(true_prices.flatten(), prepend=true_prices[0]) > 0).astype(int)
     y_pred = (np.diff(predicted_prices.flatten(), prepend=predicted_prices[0]) > 0).astype(int)
 
-    st.write(" Classification Report")
-    st.write(f"Precision: {precision_score(y_true, y_pred):.2f}")
-    st.write(f"Recall: {recall_score(y_true, y_pred):.2f}")
-    st.write(f"F1 Score: {f1_score(y_true, y_pred):.2f}")
+    st.write("### 🔍 Classification Report")
+    st.write(f"**Precision**: {precision_score(y_true, y_pred):.2f}")
+    st.write(f"**Recall**: {recall_score(y_true, y_pred):.2f}")
+    st.write(f"**F1 Score**: {f1_score(y_true, y_pred):.2f}")
     st.text(classification_report(y_true, y_pred))
 
-    
+    # -----------------------------
+    # Predict the next day price
+    # -----------------------------
     last_60_days = scaled_data[-60:]
     future_input = last_60_days.reshape(1, 60, 1)
     future_price_scaled = model.predict(future_input)
     future_price = scaler.inverse_transform(future_price_scaled)
-    st.write(" Predicted Price for Next Day:")
+    st.write("### 📅 Predicted Price for Next Day:")
     st.success(f"${future_price.flatten()[0]:.2f}")
 
-    
-    st.write("Actual vs. Predicted Stock Prices")
+    # -----------------------------
+    # Plot actual vs. predicted
+    # -----------------------------
+    st.write("### 📊 Actual vs. Predicted Stock Prices")
     plt.figure(figsize=(10, 5))
     plt.plot(true_prices, label='Actual Price', color='blue')
     plt.plot(predicted_prices, label='Predicted Price', color='orange')
