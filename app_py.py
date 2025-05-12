@@ -33,9 +33,11 @@ if symbol:
     data = np.cumsum(np.random.randn(500, 1) * 2 + 0.5) + 100  # Simulated stock price
     data = np.array(data).astype(np.float32)  # Ensure proper numeric format
 
-    # Normalize data
-    scaler = MinMaxScaler(feature_range=(0, 1))
+    # Ensure proper numeric format and shape before scaling
+    data = np.array(data).reshape(-1, 1).astype(np.float32)
     scaled_data = scaler.fit_transform(data)
+
+    
 
     # Prepare sequences
     sequence_length = 60
