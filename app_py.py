@@ -7,7 +7,7 @@ Original file is located at
     https://colab.research.google.com/drive/1Z3vaB2P0wtgNXP-30Lbz5naamEdWymdp
 """
 
-!pip install alpha_vantage scikit-learn matplotlib seaborn tensorflow
+
 
 import pandas as pd
 import numpy as np
