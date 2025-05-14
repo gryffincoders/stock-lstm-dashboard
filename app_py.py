@@ -19,14 +19,20 @@ import warnings
 # Suppress Keras and sklearn warnings
 warnings.filterwarnings("ignore", category=UserWarning, module='keras')
 
-# Secret key placeholder (not used here, but keep structure)
-api_key = st.secrets.get("api_key", None)
+# Predefined top-performing stocks by sector (mock example)
+stock_options = {
+    "Technology": ["AAPL", "MSFT", "GOOGL", "NVDA"],
+    "Finance": ["JPM", "GS", "MS"],
+    "Healthcare": ["JNJ", "PFE", "MRK"],
+    "Consumer Discretionary": ["AMZN", "TSLA", "HD"]
+}
 
 # App Title
 st.title("📈 LSTM Stock Price Prediction")
 
-# Input field
-symbol = st.text_input("Enter Stock Symbol", "AAPL")
+# Stock sector and symbol selection
+sector = st.selectbox("Select Sector", list(stock_options.keys()))
+symbol = st.selectbox("Select Stock", stock_options[sector])
 
 if symbol:
     st.write(f"🔄 Generating synthetic stock data for: `{symbol}`")
