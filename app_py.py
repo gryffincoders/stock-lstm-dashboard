@@ -18,7 +18,7 @@ import warnings
 # Suppress Keras and sklearn warnings
 warnings.filterwarnings("ignore", category=UserWarning, module='keras')
 
-# Predefined top-performing stocks by sector (mock example)
+# Predefined top-performing stocks by sector 
 stock_options = {
     "Technology": ["AAPL", "MSFT", "GOOGL", "NVDA"],
     "Finance": ["JPM", "GS", "MS"],
@@ -27,14 +27,14 @@ stock_options = {
 }
 
 # App Title
-st.title("📈 LSTM Stock Price Prediction")
+st.title("LSTM Stock Price Prediction")
 
 # Stock sector and symbol selection
 sector = st.selectbox("Select Sector", list(stock_options.keys()))
 symbol = st.selectbox("Select Stock", stock_options[sector])
 
 if symbol:
-    st.write(f"🔄 Generating synthetic stock data for: `{symbol}`")
+    st.write(f"Generating synthetic stock data for: `{symbol}`")
 
     # 1. Generate synthetic stock price data
     np.random.seed(42)
@@ -67,7 +67,7 @@ if symbol:
     # 5. Train the model
     with st.spinner("Training the LSTM model..."):
         model.fit(X, y, epochs=20, batch_size=32, verbose=0)
-    st.success("✅ Model trained!")
+    st.success(" Model trained!")
 
     # 6. Predict
     predicted_prices = model.predict(X)
@@ -78,7 +78,7 @@ if symbol:
     y_true = (np.diff(true_prices.flatten(), prepend=true_prices[0]) > 0).astype(int)
     y_pred = (np.diff(predicted_prices.flatten(), prepend=predicted_prices[0]) > 0).astype(int)
 
-    st.subheader("📊 Classification Report")
+    st.subheader(" Classification Report")
     st.write(f"**Precision**: {precision_score(y_true, y_pred):.2f}")
     st.write(f"**Recall**: {recall_score(y_true, y_pred):.2f}")
     st.write(f"**F1 Score**: {f1_score(y_true, y_pred):.2f}")
@@ -89,11 +89,11 @@ if symbol:
     future_input = last_60_days.reshape(1, 60, 1)
     future_price_scaled = model.predict(future_input)
     future_price = scaler.inverse_transform(future_price_scaled)
-    st.subheader("📈 Predicted Price for Next Day:")
+    st.subheader(" Predicted Price for Next Day:")
     st.success(f"${future_price.flatten()[0]:.2f}")
 
     # 9. Plot
-    st.subheader("📉 Actual vs. Predicted Stock Prices")
+    st.subheader(" Actual vs. Predicted Stock Prices")
     plt.figure(figsize=(10, 5))
     plt.plot(true_prices, label='Actual Price', color='blue')
     plt.plot(predicted_prices, label='Predicted Price', color='orange')
