@@ -7,7 +7,6 @@ Original file is located at
     https://colab.research.google.com/drive/1Z3vaB2P0wtgNXP-30Lbz5naamEdWymdp
 """
 
-
 import streamlit as st
 import tensorflow as tf
 import numpy as np
@@ -103,3 +102,4 @@ if symbol:
     plt.title(f"Stock Price Prediction for {symbol}")
     plt.legend()
     st.pyplot(plt)
+
