@@ -18,25 +18,23 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import precision_score, recall_score, f1_score, classification_report
 import warnings
 
-# Suppress Keras and sklearn warnings
 warnings.filterwarnings("ignore", category=UserWarning, module='tensorflow')
 
-# ✅ Set random seed for reproducibility and Dropout fix
+# Fix reproducibility for dropout
 tf.keras.utils.set_random_seed(42)
 try:
     tf.config.experimental.enable_op_determinism()
 except Exception:
-    pass  # Older versions may not support this
+    pass  # Not supported in older TF versions
 
-# Predefined top-performing stocks by sector 
+st.title("📈 LSTM Stock Price Prediction")
+
 stock_options = {
     "Technology": ["AAPL", "MSFT", "GOOGL", "NVDA"],
     "Finance": ["JPM", "GS", "MS"],
     "Healthcare": ["JNJ", "PFE", "MRK"],
     "Consumer Discretionary": ["AMZN", "TSLA", "HD"]
 }
-
-st.title("📈 LSTM Stock Price Prediction")
 
 sector = st.selectbox("Select Sector", list(stock_options.keys()))
 symbol = st.selectbox("Select Stock", stock_options[sector])
@@ -62,15 +60,11 @@ def build_and_train_model(X, y):
 
 if symbol:
     st.write(f"Generating synthetic stock data for: `{symbol}`")
-
-    # 1. Generate synthetic stock price data
     data = generate_synthetic_data()
 
-    # 2. Scale data
     scaler = MinMaxScaler(feature_range=(0, 1))
     scaled_data = scaler.fit_transform(data)
 
-    # 3. Create sequences
     sequence_length = 60
     X, y = [], []
     for i in range(sequence_length, len(scaled_data)):
@@ -79,17 +73,14 @@ if symbol:
     X, y = np.array(X), np.array(y)
     X = X.reshape(X.shape[0], X.shape[1], 1)
 
-    # 4. Build and train the model (cached)
     with st.spinner("Training the LSTM model..."):
         model = build_and_train_model(X, y)
     st.success("✅ Model trained!")
 
-    # 5. Predict on training data
     predicted_prices_scaled = model.predict(X)
     predicted_prices = scaler.inverse_transform(predicted_prices_scaled.reshape(-1, 1))
     true_prices = scaler.inverse_transform(y.reshape(-1, 1))
 
-    # 6. Classification metrics based on price movement direction
     y_true = (np.diff(true_prices.flatten(), prepend=true_prices[0]) > 0).astype(int)
     y_pred = (np.diff(predicted_prices.flatten(), prepend=predicted_prices[0]) > 0).astype(int)
 
@@ -99,15 +90,14 @@ if symbol:
     st.write(f"**F1 Score**: {f1_score(y_true, y_pred):.2f}")
     st.text(classification_report(y_true, y_pred))
 
-    # 7. Predict next day price
     last_60_days = scaled_data[-60:]
     future_input = last_60_days.reshape(1, 60, 1)
     future_price_scaled = model.predict(future_input)
     future_price = scaler.inverse_transform(future_price_scaled)
+
     st.subheader("🔮 Predicted Price for Next Day:")
     st.success(f"${future_price.flatten()[0]:.2f}")
 
-    # 8. Plot actual vs predicted prices
     st.subheader("📉 Actual vs. Predicted Stock Prices")
     fig = plt.figure(figsize=(10, 5))
     plt.plot(true_prices, label='Actual Price', color='blue')
@@ -118,6 +108,3 @@ if symbol:
     plt.legend()
     st.pyplot(fig)
     plt.close(fig)
-
-
-
