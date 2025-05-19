@@ -1,5 +1,5 @@
 streamlit
-tensorflow==2.14.0
+tensorflow==2.13.0
 scikit-learn
 matplotlib
 seaborn
@@ -7,5 +7,7 @@ pandas
 numpy
 alpha_vantage==2.3.1
 cython
+python==3.10.12
+
 
 
