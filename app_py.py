@@ -19,13 +19,13 @@ from sklearn.metrics import precision_score, recall_score, f1_score, classificat
 import warnings
 
 # Suppress Keras and sklearn warnings
-warnings.filterwarnings("ignore", category=UserWarning, module='keras')
+warnings.filterwarnings("ignore", category=UserWarning, module='tensorflow')
 
 # ✅ Set random seed for reproducibility and Dropout fix
 tf.keras.utils.set_random_seed(42)
 try:
     tf.config.experimental.enable_op_determinism()
-except:
+except Exception:
     pass  # Older versions may not support this
 
 # Predefined top-performing stocks by sector 
@@ -36,22 +36,37 @@ stock_options = {
     "Consumer Discretionary": ["AMZN", "TSLA", "HD"]
 }
 
-# App Title
 st.title("📈 LSTM Stock Price Prediction")
 
-# Stock sector and symbol selection
 sector = st.selectbox("Select Sector", list(stock_options.keys()))
 symbol = st.selectbox("Select Stock", stock_options[sector])
+
+@st.cache_data(show_spinner=False)
+def generate_synthetic_data(seed=42):
+    np.random.seed(seed)
+    data = np.cumsum(np.random.randn(500) * 2 + 0.5) + 100
+    return data.astype(np.float32).reshape(-1, 1)
+
+@st.cache_resource(show_spinner=False)
+def build_and_train_model(X, y):
+    model = tf.keras.Sequential([
+        tf.keras.layers.LSTM(50, return_sequences=True, input_shape=(X.shape[1], 1)),
+        tf.keras.layers.Dropout(0.2, seed=42),
+        tf.keras.layers.LSTM(50),
+        tf.keras.layers.Dropout(0.2, seed=42),
+        tf.keras.layers.Dense(1)
+    ])
+    model.compile(optimizer='adam', loss='mean_squared_error')
+    model.fit(X, y, epochs=20, batch_size=32, verbose=0)
+    return model
 
 if symbol:
     st.write(f"Generating synthetic stock data for: `{symbol}`")
 
     # 1. Generate synthetic stock price data
-    np.random.seed(42)
-    data = np.cumsum(np.random.randn(500) * 2 + 0.5) + 100  # 1D array
+    data = generate_synthetic_data()
 
-    # 2. Reshape and scale
-    data = data.reshape(-1, 1).astype(np.float32)
+    # 2. Scale data
     scaler = MinMaxScaler(feature_range=(0, 1))
     scaled_data = scaler.fit_transform(data)
 
@@ -64,27 +79,17 @@ if symbol:
     X, y = np.array(X), np.array(y)
     X = X.reshape(X.shape[0], X.shape[1], 1)
 
-    # 4. Build the LSTM model (✅ Dropout seed fix)
-    model = tf.keras.Sequential([
-        tf.keras.layers.LSTM(50, return_sequences=True, input_shape=(X.shape[1], 1)),
-        tf.keras.layers.Dropout(0.2, seed=42),
-        tf.keras.layers.LSTM(50),
-        tf.keras.layers.Dropout(0.2, seed=42),
-        tf.keras.layers.Dense(1)
-    ])
-    model.compile(optimizer='adam', loss='mean_squared_error')
-
-    # 5. Train the model
+    # 4. Build and train the model (cached)
     with st.spinner("Training the LSTM model..."):
-        model.fit(X, y, epochs=20, batch_size=32, verbose=0)
+        model = build_and_train_model(X, y)
     st.success("✅ Model trained!")
 
-    # 6. Predict
-    predicted_prices = model.predict(X)
-    predicted_prices = scaler.inverse_transform(predicted_prices.reshape(-1, 1))
+    # 5. Predict on training data
+    predicted_prices_scaled = model.predict(X)
+    predicted_prices = scaler.inverse_transform(predicted_prices_scaled.reshape(-1, 1))
     true_prices = scaler.inverse_transform(y.reshape(-1, 1))
 
-    # 7. Classification metrics
+    # 6. Classification metrics based on price movement direction
     y_true = (np.diff(true_prices.flatten(), prepend=true_prices[0]) > 0).astype(int)
     y_pred = (np.diff(predicted_prices.flatten(), prepend=predicted_prices[0]) > 0).astype(int)
 
@@ -94,7 +99,7 @@ if symbol:
     st.write(f"**F1 Score**: {f1_score(y_true, y_pred):.2f}")
     st.text(classification_report(y_true, y_pred))
 
-    # 8. Predict next day price
+    # 7. Predict next day price
     last_60_days = scaled_data[-60:]
     future_input = last_60_days.reshape(1, 60, 1)
     future_price_scaled = model.predict(future_input)
@@ -102,15 +107,17 @@ if symbol:
     st.subheader("🔮 Predicted Price for Next Day:")
     st.success(f"${future_price.flatten()[0]:.2f}")
 
-    # 9. Plot
+    # 8. Plot actual vs predicted prices
     st.subheader("📉 Actual vs. Predicted Stock Prices")
-    plt.figure(figsize=(10, 5))
+    fig = plt.figure(figsize=(10, 5))
     plt.plot(true_prices, label='Actual Price', color='blue')
     plt.plot(predicted_prices, label='Predicted Price', color='orange')
     plt.xlabel("Days")
     plt.ylabel("Price")
     plt.title(f"Stock Price Prediction for {symbol}")
     plt.legend()
-    st.pyplot(plt)
+    st.pyplot(fig)
+    plt.close(fig)
+
 
 
