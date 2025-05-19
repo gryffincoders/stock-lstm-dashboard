@@ -40,7 +40,9 @@ sector = st.selectbox("Select Sector", list(stock_options.keys()))
 symbol = st.selectbox("Select Stock", stock_options[sector])
 
 @st.cache_data(show_spinner=False)
-def generate_synthetic_data(seed=42):
+def generate_synthetic_data(symbol: str):
+    # Create a unique seed based on the symbol for reproducible but distinct data
+    seed = abs(hash(symbol)) % (2**32)
     np.random.seed(seed)
     data = np.cumsum(np.random.randn(500) * 2 + 0.5) + 100
     return data.astype(np.float32).reshape(-1, 1)
@@ -60,7 +62,7 @@ def build_and_train_model(X, y):
 
 if symbol:
     st.write(f"Generating synthetic stock data for: `{symbol}`")
-    data = generate_synthetic_data()
+    data = generate_synthetic_data(symbol)
 
     scaler = MinMaxScaler(feature_range=(0, 1))
     scaled_data = scaler.fit_transform(data)
@@ -95,7 +97,7 @@ if symbol:
     future_price_scaled = model.predict(future_input)
     future_price = scaler.inverse_transform(future_price_scaled)
 
-    st.subheader("🔮 Predicted Price for Next Day:")
+    st.subheader("Predicted Price for Next Day:")
     st.success(f"${future_price.flatten()[0]:.2f}")
 
     st.subheader("📉 Actual vs. Predicted Stock Prices")
