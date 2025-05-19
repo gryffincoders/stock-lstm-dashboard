@@ -1,13 +1,12 @@
-streamlit
 tensorflow==2.13.0
-scikit-learn
-matplotlib
-seaborn
-pandas
-numpy
+scikit-learn==1.2.2
+matplotlib==3.7.1
+seaborn==0.12.2
+pandas==1.5.3
+numpy==1.24.3
 alpha_vantage==2.3.1
-cython
-python==3.10.12
+cython==0.29.35
+
 
 
 
