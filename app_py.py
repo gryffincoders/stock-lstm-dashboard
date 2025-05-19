@@ -7,6 +7,9 @@ Original file is located at
     https://colab.research.google.com/drive/1Z3vaB2P0wtgNXP-30Lbz5naamEdWymdp
 """
 
+# -*- coding: utf-8 -*-
+"""Updated app.py for LSTM Stock Prediction with Dropout Fix"""
+
 import streamlit as st
 import tensorflow as tf
 import numpy as np
@@ -18,6 +21,13 @@ import warnings
 # Suppress Keras and sklearn warnings
 warnings.filterwarnings("ignore", category=UserWarning, module='keras')
 
+# ✅ Set random seed for reproducibility and Dropout fix
+tf.keras.utils.set_random_seed(42)
+try:
+    tf.config.experimental.enable_op_determinism()
+except:
+    pass  # Older versions may not support this
+
 # Predefined top-performing stocks by sector 
 stock_options = {
     "Technology": ["AAPL", "MSFT", "GOOGL", "NVDA"],
@@ -27,7 +37,7 @@ stock_options = {
 }
 
 # App Title
-st.title("LSTM Stock Price Prediction")
+st.title("📈 LSTM Stock Price Prediction")
 
 # Stock sector and symbol selection
 sector = st.selectbox("Select Sector", list(stock_options.keys()))
@@ -41,11 +51,11 @@ if symbol:
     data = np.cumsum(np.random.randn(500) * 2 + 0.5) + 100  # 1D array
 
     # 2. Reshape and scale
-    data = data.reshape(-1, 1).astype(np.float32)  # Ensure (n_samples, 1)
+    data = data.reshape(-1, 1).astype(np.float32)
     scaler = MinMaxScaler(feature_range=(0, 1))
     scaled_data = scaler.fit_transform(data)
 
-    # 3. Create sequences for LSTM
+    # 3. Create sequences
     sequence_length = 60
     X, y = [], []
     for i in range(sequence_length, len(scaled_data)):
@@ -54,12 +64,12 @@ if symbol:
     X, y = np.array(X), np.array(y)
     X = X.reshape(X.shape[0], X.shape[1], 1)
 
-    # 4. Build the LSTM model
+    # 4. Build the LSTM model (✅ Dropout seed fix)
     model = tf.keras.Sequential([
         tf.keras.layers.LSTM(50, return_sequences=True, input_shape=(X.shape[1], 1)),
-        tf.keras.layers.Dropout(0.2),
+        tf.keras.layers.Dropout(0.2, seed=42),
         tf.keras.layers.LSTM(50),
-        tf.keras.layers.Dropout(0.2),
+        tf.keras.layers.Dropout(0.2, seed=42),
         tf.keras.layers.Dense(1)
     ])
     model.compile(optimizer='adam', loss='mean_squared_error')
@@ -67,7 +77,7 @@ if symbol:
     # 5. Train the model
     with st.spinner("Training the LSTM model..."):
         model.fit(X, y, epochs=20, batch_size=32, verbose=0)
-    st.success(" Model trained!")
+    st.success("✅ Model trained!")
 
     # 6. Predict
     predicted_prices = model.predict(X)
@@ -78,7 +88,7 @@ if symbol:
     y_true = (np.diff(true_prices.flatten(), prepend=true_prices[0]) > 0).astype(int)
     y_pred = (np.diff(predicted_prices.flatten(), prepend=predicted_prices[0]) > 0).astype(int)
 
-    st.subheader(" Classification Report")
+    st.subheader("📊 Classification Report")
     st.write(f"**Precision**: {precision_score(y_true, y_pred):.2f}")
     st.write(f"**Recall**: {recall_score(y_true, y_pred):.2f}")
     st.write(f"**F1 Score**: {f1_score(y_true, y_pred):.2f}")
@@ -89,11 +99,11 @@ if symbol:
     future_input = last_60_days.reshape(1, 60, 1)
     future_price_scaled = model.predict(future_input)
     future_price = scaler.inverse_transform(future_price_scaled)
-    st.subheader(" Predicted Price for Next Day:")
+    st.subheader("🔮 Predicted Price for Next Day:")
     st.success(f"${future_price.flatten()[0]:.2f}")
 
     # 9. Plot
-    st.subheader(" Actual vs. Predicted Stock Prices")
+    st.subheader("📉 Actual vs. Predicted Stock Prices")
     plt.figure(figsize=(10, 5))
     plt.plot(true_prices, label='Actual Price', color='blue')
     plt.plot(predicted_prices, label='Predicted Price', color='orange')
@@ -102,4 +112,5 @@ if symbol:
     plt.title(f"Stock Price Prediction for {symbol}")
     plt.legend()
     st.pyplot(plt)
+
 
