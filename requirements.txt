@@ -1,6 +1,6 @@
 streamlit
 alpha_vantage
-tensorflow
+tensorflow==2.14.0
 scikit-learn
 matplotlib
 seaborn
